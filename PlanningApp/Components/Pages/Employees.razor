@@ -41,7 +41,7 @@
 
 		if (confirmed)
 		{
-			await EmployeeService.DeactiveAsync(employeeToDelete);
+			await EmployeeService.DeactivateAsync(employeeToDelete);
 			employees = await EmployeeService.GetAllAsync();
 		}
 	}

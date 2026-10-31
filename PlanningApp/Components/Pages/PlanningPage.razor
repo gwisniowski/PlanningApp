@@ -94,16 +94,29 @@
 		if (selectedCell == null)
 			return;
 
-		bool result = await PlanningService.AssignEmployeeAsync(
-		selectedCell.WorkDate,
-		selectedCell.Shift,
-		selectedCell.ProductionLineId,
-		selectedCell.Position,
-		employeeId);
+		errorMessage = null;
 
-		if (!result)
+		var result = await TryAssign(employeeId, ignoreShortRest: false);
+
+		if (result == AssignResult.ShortRest)
 		{
-			errorMessage = "Employee is already assigned to another shift on this day.";
+			bool confirm = await JS.InvokeAsync<bool>(
+			"confirm",
+			"Short rest: this employee works the afternoon shift the day before or the morning shift the day after. Assign anyway?");
+
+			if (!confirm)
+				return;
+
+			result = await TryAssign(employeeId, ignoreShortRest: true);
+		}
+
+		if (result != AssignResult.Success)
+		{
+			errorMessage = result switch
+			{
+				AssignResult.AlreadyAssignedThatDay => "Employee is already assigned to another shift on this day.",
+				_ => "Could not assign employee."
+			};
 			return;
 		}
 
@@ -111,6 +124,14 @@
 		selectedCell = null;
 		ClosePopup();
 	}
+	private Task<AssignResult> TryAssign(int employeeId, bool ignoreShortRest)
+	=> PlanningService.AssignEmployeeAsync(
+		selectedCell!.WorkDate,
+		selectedCell.Shift,
+		selectedCell.ProductionLineId,
+		selectedCell.Position,
+		employeeId,
+		ignoreShortRest);
 
 	private async Task  UnassignEmployeeAsync()
 	{
@@ -152,9 +173,9 @@
 	private async Task CopyToNextWeek()
 	{
 		bool confirm = await JS.InvokeAsync<bool>(
-	  "confirm",
-	  "Are you sure you want to copy this schedule to next week?"
-  );
+			"confirm",
+			"Are you sure you want to copy this schedule to next week?"
+		);
 
 		if (!confirm)
 			return;
@@ -170,11 +191,22 @@
 
 			return;
 		}
-
 		await LoadWeek();
 	}
 
-	
+	private async Task CleanAllSchedule(int selcetedLineId, int selectedShift)
+	{
+		bool confirm = await JS.InvokeAsync<bool>(
+				"confirm",
+				"Are you sure you want to clear the whole schedule for this week? This cannot be undone.");
+
+		if (!confirm)
+			return;
+
+		await PlanningService.CleanAllSchedule(selectedWeek, selcetedLineId, selectedShift);
+		await LoadWeek();
+	}
+
 }
 
 <div class="container-fluid px-4 pt-2">
@@ -194,11 +226,14 @@
 				@onclick="NextWeek">
 			<i class="bi bi-chevron-right"></i>
 		</button>
-		<button type="button"
-				class="btn btn-link text-decoration-underline p-0 d-inline-flex align-items-center gap-2 ms-2"
-				style="color: #115e59; font-weight: 500; font-size: 0.95rem;" @onclick="CopyToNextWeek">
-			 Copy to next week 
-		</button>
+		@if(productionLines.Any(e=>e.IsActive))
+		{
+			<button type="button"
+					class="btn btn-link text-decoration-underline p-0 d-inline-flex align-items-center gap-2 ms-2"
+					style="color: #115e59; font-weight: 500; font-size: 0.95rem;" @onclick="CopyToNextWeek">
+				Copy to next week
+			</button>
+		}
 	</div>
 
 	@foreach (var line in productionLines)
@@ -250,18 +285,29 @@
 					}
 				</tbody>
 			</table>
-		}
+			<button type="button"
+					class="btn btn-link text-decoration-underline p-0 d-inline-flex align-items-center gap-2 ms-2 mb-5"
+					style="color: #115e59; font-weight: 400; font-size: 0.90rem;" @onclick="() => CleanAllSchedule(line.Id, 1)">
+				Clean all schedule!
+			</button>
+
+		}	
 	}
+
 	@if (showSecondShift)
 	{
-		<div class="d-flex justify-content-center align-items-center" style="height: 100px;">
-			<h3>Shift 2</h3>
-		</div>
+		if (productionLines.Any(e=>e.IsActive))
+		{
+			<div class="d-flex justify-content-center align-items-center" style="height: 100px;">
+				<h3>Shift 2</h3>
+			</div>
+		}
+
 		@foreach (var line in productionLines)
 		{
+
 			if (line.IsActive == true)
 			{
-
 				<h3>line: @line.Name</h3>
 				<table class="table table-bordered table-hover">
 					<thead>
@@ -281,6 +327,7 @@
 						</tr>
 					</thead>
 					<tbody>
+
 						@foreach (var position in PlanningPositions.All)
 						{
 							<tr>
@@ -307,6 +354,11 @@
 						}
 					</tbody>
 				</table>
+				<button type="button"
+						class="btn btn-link text-decoration-underline p-0 d-inline-flex align-items-center gap-2 ms-2 mb-5"
+						style="color: #115e59; font-weight: 400; font-size: 0.90rem;" @onclick="() => CleanAllSchedule(line.Id, 2)">
+					Clean all schedule!
+				</button>
 			}
 		}
 	}

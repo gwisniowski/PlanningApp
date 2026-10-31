@@ -1,10 +1,11 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using PlanningApp.Data;
 using PlanningApp.Models;
+using PlanningApp.Interfaces;
 
 namespace PlanningApp.Services
 {
-    public class ProductionLineService
+    public class ProductionLineService : IProductionLineService
     {
         private readonly IDbContextFactory<PlanningDbContext> _contextFactory;
 

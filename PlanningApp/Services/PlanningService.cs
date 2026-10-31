@@ -1,11 +1,17 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.VisualBasic;
 using PlanningApp.Data;
 using PlanningApp.Models;
+using PlanningApp.Interfaces;
 
 namespace PlanningApp.Services
 {
-    public class PlanningService
+    public enum AssignResult
+    {
+        Success,
+        AlreadyAssignedThatDay,
+        ShortRest
+    }
+    public class PlanningService : IPlanningService
     {
         private readonly IDbContextFactory<PlanningDbContext> _contextFactory;
         public PlanningService(IDbContextFactory<PlanningDbContext> context)
@@ -37,18 +43,18 @@ namespace PlanningApp.Services
         }
 
         //Przypisanie pracownika z imienia i nazwiska do konkretnej komórki w planingu
-        public async Task<bool> AssignEmployeeAsync(DateTime workDate, int shift, int productionLineId, string position, int? employeeId) 
+        public async Task<AssignResult> AssignEmployeeAsync(DateTime workDate, int shift, int productionLineId, string position, 
+            int? employeeId, bool ignoreShortRest = false) 
         {
             var start = workDate.Date;  
 
             if (employeeId.HasValue) 
             {
-                bool canAssign = await CanAssignEmployeeAsync(employeeId.Value, start, shift);
+                if (!await CanAssignEmployeeAsync(employeeId.Value, start, shift))
+                    return AssignResult.AlreadyAssignedThatDay;
 
-                if (!canAssign) 
-                {
-                    return false;
-                }
+                if (!ignoreShortRest && await HasShortRestAsync(employeeId.Value, start, shift))
+                    return AssignResult.ShortRest;
             }
 
             await using var context = _contextFactory.CreateDbContext();
@@ -77,7 +83,7 @@ namespace PlanningApp.Services
                 assignment.EmployeeId = employeeId; 
             }
             await context.SaveChangesAsync();
-            return true;
+            return AssignResult.Success;
         }
 
         //Walidacja przed przypisaniem pracownika
@@ -95,6 +101,38 @@ namespace PlanningApp.Services
             x.Shift != shift);
 
             return !alreadyAssigned;
+        }
+
+        //Walidacja krotkiej przerwy pracownika przed przypisaniem
+        public async Task<bool> HasShortRestAsync(int employeeId, DateTime workDate, int shift) 
+        {
+            await using var context = _contextFactory.CreateDbContext();
+
+            var targetDate = workDate.Date;
+
+            if (shift == 1)
+            {
+                var yesterdayStart = targetDate.AddDays(-1);
+                var yesterdayEnd = targetDate;
+
+                return await context.ScheduleAssignments.AnyAsync(x =>
+                    x.EmployeeId == employeeId &&
+                    x.WorkDate >= yesterdayStart &&
+                    x.WorkDate < yesterdayEnd &&
+                    x.Shift == 2);
+            }
+            else if (shift == 2)
+            {
+                var tomorrowStart = targetDate.AddDays(1);
+                var tomorrowEnd = tomorrowStart.AddDays(1);
+
+                return await context.ScheduleAssignments.AnyAsync(x =>
+                    x.EmployeeId == employeeId &&
+                    x.WorkDate >= tomorrowStart &&
+                    x.WorkDate < tomorrowEnd &&
+                    x.Shift == 1);
+            }
+            return false;
         }
 
         public async Task UnassignEmployeeAsync(DateTime workDate, int shift, int productionLineId, string position) 
@@ -148,6 +186,28 @@ namespace PlanningApp.Services
 
             await context.SaveChangesAsync();
             return true;
+        }
+
+        //Funkcja czyszcząca cały harmonogram z bieżącego tygodnia
+        public async Task CleanAllSchedule(DateTime anyDayInWeek, int? productionLineId = null, int? shift = null) 
+        {
+            DateTime startOfWeek = GetStartOfWeek(anyDayInWeek);
+            DateTime endOfWeek = startOfWeek.AddDays(7);
+
+            await using var context = _contextFactory.CreateDbContext();
+
+            var query = context.ScheduleAssignments.Where(x => x.WorkDate >= startOfWeek && x.WorkDate < endOfWeek);
+
+             if (productionLineId.HasValue)
+                query = query.Where(x => x.ProductionLineId == productionLineId.Value);
+
+            if (shift.HasValue)
+                query = query.Where(x => x.Shift == shift.Value);
+
+            var items = await query.ToListAsync();
+
+            context.ScheduleAssignments.RemoveRange(items);
+            await context.SaveChangesAsync();
         }
     }
 }

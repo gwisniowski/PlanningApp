@@ -57,6 +57,11 @@
 		}
 		else
 		{
+			if (productionLines.Any(e=>e.Name == formLines.Name && e.IsActive))
+			{
+				await JS.InvokeVoidAsync("alert", "A production line with this name already exists!");
+				return;
+			}
 			await ProductionLineService.AddAsync(formLines);
 		}
 		productionLines = await ProductionLineService.GetAllAsync();
@@ -72,13 +77,13 @@
 	<h1 class="fw-bold text-dark mb-2">Production Lines</h1>
 	<EditForm Model="@formLines" OnValidSubmit="SaveLine">
 		<DataAnnotationsValidator />
-		<ValidationSummary />
 
 		<div style="max-width: 800px">
 			<div class="mb-3">
 				<label class="form-label">Line name</label>
 				<InputText class="form-control"
 						   @bind-Value="formLines.Name" />
+				<ValidationMessage For="@(() => formLines.Name)" class="text-danger small mt-1" />
 			</div>
 
 			<button class="btn @(isEditing ? "btn-success" : "btn-primary")">

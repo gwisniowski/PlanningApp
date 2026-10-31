@@ -1,10 +1,11 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using PlanningApp.Data;
 using PlanningApp.Models;
+using PlanningApp.Interfaces;
 
 namespace PlanningApp.Services
 {
-    public class EmployeeService
+    public class EmployeeService : IEmployeeService
     {
         private readonly IDbContextFactory <PlanningDbContext> _contextFactory;
 
@@ -26,7 +27,7 @@ namespace PlanningApp.Services
             await context.SaveChangesAsync();
         }
 
-        public async Task DeactiveAsync(Employee employee) 
+        public async Task DeactivateAsync(Employee employee) 
         {
             await using var context = _contextFactory.CreateDbContext();
             var employeToDelete = await context.Employees.FirstOrDefaultAsync(x => x.Id == employee.Id);
