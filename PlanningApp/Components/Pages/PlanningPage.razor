@@ -271,7 +271,7 @@
 								<td @onclick="(e) => SelectCell(e, currentDay, 1, line.Id, position)" style="cursor: pointer;"
 									class="position-relative @(assignment != null ? "assigned" : "")">
 
-									@if (assignment != null)
+									@if (assignment?.Employee != null)
 									{
 										@assignment.Employee.FirstName
 									}
@@ -340,7 +340,7 @@
 									<td @onclick="(e) => SelectCell(e, currentDay, 2, line.Id, position)" style="cursor: pointer;"
 										class="position-relative @(assignment != null ? "assigned" : "")">
 
-										@if (assignment != null)
+										@if (assignment?.Employee != null)
 										{
 											@assignment.Employee.FirstName
 										}
@@ -380,7 +380,7 @@
 			</div>
 		}
 	</div>
-	@if (isPopupVisible)
+	@if (isPopupVisible && selectedCell is { } cell)
 	{
 		<div @onclick="ClosePopup"
 			 style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1040; background: transparent;">

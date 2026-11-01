@@ -75,7 +75,6 @@
     private int todayAssignments;
     private int missingPositions;
     private int requiredPositions = 6;
-    private bool loading = true;
 
     protected override async Task OnInitializedAsync()
     {
@@ -91,7 +90,5 @@
         lineCount = lines.Count(e => e.IsActive);
         todayAssignments = todays.Count(x => x.EmployeeId != null);
         missingPositions = requiredPositions - todayAssignments;
-
-        loading = false;
     }
 }

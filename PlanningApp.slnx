@@ -1,3 +1,4 @@
 <Solution>
+  <Project Path="PlanningApp.Tests/PlanningApp.Tests.csproj" Id="00716d77-4e02-4277-8db7-85b7a40112e5" />
   <Project Path="PlanningApp/PlanningApp.csproj" />
 </Solution>
