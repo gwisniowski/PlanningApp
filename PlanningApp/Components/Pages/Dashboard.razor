@@ -1,5 +1,11 @@
 ﻿@page "/dashboard"
 
+@using PlanningApp.Services
+
+@inject EmployeeService EmployeeService
+@inject ProductionLineService LineService
+@inject PlanningService PlanningService
+
 <PageTitle>Dashboard</PageTitle>
 
 <div class="container-fluid px-4 pt-2">
@@ -9,7 +15,8 @@
             <h1 class="fw-bold text-dark m-0">Dashboard</h1>
             <p class="text-muted m-0">Welcome to the production planning dashboard.</p>
         </div>
-        <span class="badge rounded-pill px-3 py-2" style="background-color: #e0f2f1; color: #0f766e; font-weight: 600;">Today</span>
+        <span class="badge rounded-pill px-3 py-2" style="background-color: #e0f2f1; color: #0f766e; font-weight: 600;">
+            @DateTime.Today.ToString("dddd, dd.MM.yyyy", System.Globalization.CultureInfo.InvariantCulture)</span>
     </div>
 
     <div class="row g-3 mb-5">
@@ -20,7 +27,7 @@
                     <span class="fw-semibold text-muted" style="font-size: 0.95rem;">Employees</span>
                     <span class="fs-5" style="color: #0f766e;">👥</span>
                 </div>
-                <div class="fs-1 fw-bold text-dark lh-1 mb-1">12</div>
+                <div class="fs-1 fw-bold text-dark lh-1 mb-1">@activeEmployees</div>
                 <div class="text-muted small">Active employees</div>
             </div>
         </div>
@@ -31,7 +38,7 @@
                     <span class="fw-semibold text-muted" style="font-size: 0.95rem;">Lines</span>
                     <span class="fs-5" style="color: #0f766e;">⚙️</span>
                 </div>
-                <div class="fs-1 fw-bold text-dark lh-1 mb-1">0</div>
+                <div class="fs-1 fw-bold text-dark lh-1 mb-1">@lineCount</div>
                 <div class="text-muted small">Production lines</div>
             </div>
         </div>
@@ -42,7 +49,7 @@
                     <span class="fw-semibold text-muted" style="font-size: 0.95rem;">Today's shift</span>
                     <span class="fs-5" style="color: #0f766e;">🗓️</span>
                 </div>
-                <div class="fs-1 fw-bold text-dark lh-1 mb-1">0</div>
+                <div class="fs-1 fw-bold text-dark lh-1 mb-1">@todayAssignments</div>
                 <div class="text-muted small">Assignments</div>
             </div>
         </div>
@@ -53,8 +60,8 @@
                     <span class="fw-semibold text-muted" style="font-size: 0.95rem;">Alerts</span>
                     <span class="fs-5 text-danger">⚠️</span>
                 </div>
-                <div class="fs-1 fw-bold text-danger lh-1 mb-1">0</div>
-                <div class="text-muted small">Missing positions</div>
+                <div class="fs-1 fw-bold text-danger lh-1 mb-1">@missingPositions</div>
+                <div class="text-muted small">Missing positions today</div>
             </div>
         </div>
 
@@ -63,5 +70,28 @@
 </div>
 
 @code {
-    
+    private int activeEmployees;
+    private int lineCount;
+    private int todayAssignments;
+    private int missingPositions;
+    private int requiredPositions = 6;
+    private bool loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var today = DateTime.Today;
+
+        var employees = await EmployeeService.GetAllAsync();
+        var lines = await LineService.GetAllAsync();
+        var week = await PlanningService.GetWeekPlanningAsync(today);
+
+        var todays = week.Where(x => x.WorkDate.Date == today).ToList();
+
+        activeEmployees = employees.Count(e => e.IsActive);
+        lineCount = lines.Count(e => e.IsActive);
+        todayAssignments = todays.Count(x => x.EmployeeId != null);
+        missingPositions = requiredPositions - todayAssignments;
+
+        loading = false;
+    }
 }
