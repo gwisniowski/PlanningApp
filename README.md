@@ -41,7 +41,7 @@ This is a learning MVP built for myself, so the scope is deliberately small and 
 ### Run
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/gwisniowski/PlanningApp.git.
 cd PlanningApp
 ```
 
