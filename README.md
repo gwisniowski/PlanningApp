@@ -4,9 +4,10 @@ A production shift planning web app built with **Blazor (.NET 10)**. It lets a p
 
 This is a learning MVP built for myself, so the scope is deliberately small and focused on the core planning workflow.
 
-![Dashboard](docs/screenshots/dashboard.png)
-![Planner](docs/screenshots/planner.png)
-![Employees](docs/screenshots/employees.png)
+![Dashboard](docs/screenshots/Dashboard.png)
+![Planner](docs/screenshots/Planner.png)
+![Employees](docs/screenshots/Employees.png)
+![Production Lines](docs/screenshots/ProductionLines.png)
 
 ## Features
 
